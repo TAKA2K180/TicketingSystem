@@ -89,12 +89,11 @@ namespace TicketingSystem
         {
             con.Close();
             command = "Select Requestor,[Prio],[CurrentStat] as 'Status',Subject,[Department], DateFiled as 'Date Filed',TimeFiled as 'Time Filed', Technician, Assigned,[TicketTag] AS 'Ticket Tag' from tblJobReq WHERE DateFiled >= DATEADD(day, -30, GETDATE()) order by case " +
-                "when lower(Assigned) = 1 then 1 " +
-                "when lower(CurrentStat) like '%Done%' then 4 " +
-                "when lower(CurrentStat) like '%Approved%' then 5 " +
-                "when lower(CurrentStat) like '%Cancelled%' then 4 " +
-                "when lower(CurrentStat) like '%Ongoing%' then 3 " +
-                "when lower(CurrentStat) like '%Pending%' then 2 " +
+                "when lower(CurrentStat) like '%Pending%' then 1 " +
+                "when lower(CurrentStat) like '%Ongoing%' then 2 " +
+                "when lower(CurrentStat) like '%Done%' then 3 " +
+                "when lower(CurrentStat) like '%Approved%' then 4 " +
+                "when lower(CurrentStat) like '%Cancelled%' then 5 " +
                 "when lower(Prio) = 1 then 1 " +
                 "when lower(Prio) = 2 then 2 " +
                 "when lower(Prio) = 3 then 3 " +
@@ -102,6 +101,7 @@ namespace TicketingSystem
                 "when lower(Prio) = 5 then 5 " +
                 "else 6 end, DateFiled desc";
             SqlCommand cmd = new SqlCommand(command, con);
+            cmd.CommandTimeout = 0;
             SqlDataAdapter dAdapter = new SqlDataAdapter(cmd);
             con.Open();
             SqlDataReader sdr = cmd.ExecuteReader();
@@ -207,7 +207,7 @@ namespace TicketingSystem
                             TicketModel.IssueType = sdr["IssueType"].ToString();
                             TicketModel.Condition = sdr["Condition"].ToString();
                             TicketModel.Currentstat = sdr["CurrentStat"].ToString();
-                            ez = Convert.ToDateTime(sdr["DateFiled"].ToString());
+                            ez = DateTime.Parse(sdr["DateFiled"].ToString());
                             TicketModel.DateFiled = Convert.ToDateTime(ez.ToShortDateString() + " " + string.Format("{0:t}", sdr["TimeFiled"].ToString()));
                             TicketModel.ImagePath = sdr["ImagePath"].ToString();
                             TicketModel.TimeFiled = TimeSpan.Parse(sdr["TimeFiled"].ToString());
@@ -215,8 +215,9 @@ namespace TicketingSystem
                             TicketModel.Technician = sdr["Technician"].ToString();
                             TicketModel.Requestor = sdr["Requestor"].ToString();
                             TicketModel.DateRequired = Convert.ToDateTime(sdr["DateRequired"]);
+                            TicketModel.Findings = sdr["Findings"].ToString();
+                            TicketModel.Actions = sdr["PreventiveActions"].ToString();
                             this.dgvOverview.DefaultCellStyle.Font = new Font("Poppins", 15);
-
                         }
 
                         //cbPrio.Items.Add(Convert.ToString(TicketModel.Priority));
@@ -393,51 +394,57 @@ namespace TicketingSystem
                 DialogResult dialogResult = MessageBox.Show("Are your sure?", "Update ticket", MessageBoxButtons.YesNo);
                 if (dialogResult == DialogResult.Yes)
                 {
-
-                    con.Close();
-                    command = "select * from tblJobReq where TicketTag = '" + TicketModel.TicketTag + "'";
-                    SqlCommand cmd = new SqlCommand(command, con);
-                    con.Open();
-                    cmd.ExecuteNonQuery();
-                    SqlDataReader sdr = cmd.ExecuteReader();
-                    if (sdr.HasRows)
+                    try
                     {
-                        while (sdr.Read())
+                        con.Close();
+                        command = "select * from tblJobReq where TicketTag = '" + TicketModel.TicketTag + "'";
+                        SqlCommand cmd = new SqlCommand(command, con);
+                        con.Open();
+                        cmd.ExecuteNonQuery();
+                        SqlDataReader sdr = cmd.ExecuteReader();
+                        if (sdr.HasRows)
                         {
-                            if (sdr["DateApproved"].ToString() != "")
+                            while (sdr.Read())
                             {
-                                edited = Convert.ToDateTime(sdr["DateApproved"].ToString());
-                            }
-                            if (edited != default)
-                            {
-                                down = edited - TicketModel.DateFiled;
-                            }
-                            else
-                            {
-                                down = DateTime.Now - TicketModel.DateFiled;
-                            }
-                            Elapsed = ((int)Math.Round(down.TotalHours, MidpointRounding.AwayFromZero)).ToString();
-                            if (sdr["Technician"].ToString().ToUpper() == GlobalLogin.FirstName + " " + GlobalLogin.LastName)
-                            {
-                                SqlConnection con2 = new SqlConnection(DbConnection.cs);
-                                con2.Close();
-                                command = "update tblJobReq set CurrentStat = '" + "Done" + "', DateDone = '" + DateTime.Now.ToShortDateString() + "', TimeDone = '" + DateTime.Now.ToShortTimeString() + "',Technician = '" + GlobalLogin.Username + "', Elapsed = '" + Elapsed + "' where TicketTag = '" + TicketModel.TicketTag + "'";
-                                SqlCommand cmd2 = new SqlCommand(command, con2);
-                                con2.Open();
-                                cmd2.ExecuteNonQuery();
-                                MaterialMessageBox.Show("Ticket updated.");
-                                Overview();
-                            }
-                            else
-                            {
-                                MaterialMessageBox.Show("You are not the assigned technician");
+                                if (sdr["DateApproved"].ToString() != "")
+                                {
+                                    edited = Convert.ToDateTime(sdr["DateApproved"].ToString());
+                                }
+                                if (edited != default)
+                                {
+                                    down = edited - TicketModel.DateFiled;
+                                }
+                                else
+                                {
+                                    down = DateTime.Now - TicketModel.DateFiled;
+                                }
+                                Elapsed = ((int)Math.Round(down.TotalHours, MidpointRounding.AwayFromZero)).ToString();
+                                if (sdr["Technician"].ToString().ToUpper() == GlobalLogin.FirstName + " " + GlobalLogin.LastName)
+                                {
+                                    SqlConnection con2 = new SqlConnection(DbConnection.cs);
+                                    con2.Close();
+                                    command = "update tblJobReq set CurrentStat = '" + "Done" + "', DateDone = '" + DateTime.Now.ToShortDateString() + "', TimeDone = '" + DateTime.Now.ToShortTimeString() + "', Elapsed = '" + Elapsed + "' where TicketTag = '" + TicketModel.TicketTag + "'";
+                                    SqlCommand cmd2 = new SqlCommand(command, con2);
+                                    con2.Open();
+                                    cmd2.ExecuteNonQuery();
+                                    MaterialMessageBox.Show("Ticket updated.");
+                                    Overview();
+                                }
+                                else
+                                {
+                                    MaterialMessageBox.Show("You are not the assigned technician");
+                                }
                             }
                         }
+                        else
+                        {
+                            MessageBox.Show("Error loading ticket");
+                        }
                     }
-                    else
+                    catch (Exception)
                     {
-                        MessageBox.Show("Error loading ticket");
                     }
+                    
                 }
             }
             else
@@ -499,13 +506,13 @@ namespace TicketingSystem
             else
             {
                 panelExtract.Visible = true;
-                if (dateTimePicker1.Value.ToString("MMMM") == dateTimePicker2.Value.ToString("MMMM"))
+                if (dateTimePicker1.Value.ToString("MMM") == dateTimePicker2.Value.ToString("MMM"))
                 {
-                    txtMonth.Text = dateTimePicker1.Value.Month.ToString("MMMM");
+                    txtMonth.Text = dateTimePicker1.Value.ToString("MMMM");
                 }
                 else
                 {
-                    txtMonth.Text = dateTimePicker1.Value.ToString("MMMM") + " - " + dateTimePicker2.Value.ToString("MMMM");
+                    txtMonth.Text = dateTimePicker1.Value.ToString("MMM") + " - " + dateTimePicker2.Value.ToString("MMM");
                 }
                 SelectTech();
                 HoursCompute();
@@ -570,7 +577,7 @@ namespace TicketingSystem
             if (cbTechReportGen.Text == "All")
             {
                 //AFAB00811722E
-                command = "SELECT count(CurrentStat) as 'workdone' FROM [db_TicketingSystem].[dbo].[tblJobReq] where CurrentStat = 'Approved' and CurrentStat = 'Done' and DateFiled between '" + dateTimePicker1.Value.ToShortDateString() + "' and '" + dateTimePicker2.Value.ToShortDateString() + "'";
+                command = "SELECT count(CurrentStat) as 'workdone' FROM [db_TicketingSystem].[dbo].[tblJobReq] where CurrentStat = 'Approved' or CurrentStat = 'Done' and DateFiled between '" + dateTimePicker1.Value.ToShortDateString() + "' and '" + dateTimePicker2.Value.ToShortDateString() + "'";
             }
             else
             {
@@ -594,7 +601,7 @@ namespace TicketingSystem
         {
             if (cbTechReportGen.Text == "All")
             {
-                command = "SELECT count(CurrentStat) as 'workUndone' FROM [db_TicketingSystem].[dbo].[tblJobReq] where CurrentStat = 'Pending' and DateFiled between '" + dateTimePicker1.Value.ToShortDateString() + "' and '" + dateTimePicker2.Value.ToShortDateString() + "'";
+                command = "SELECT count(CurrentStat) as 'workUndone' FROM [db_TicketingSystem].[dbo].[tblJobReq] where CurrentStat = 'Pending' or DateFiled between '" + dateTimePicker1.Value.ToShortDateString() + "' and '" + dateTimePicker2.Value.ToShortDateString() + "'";
             }
             else
             {
@@ -636,7 +643,7 @@ namespace TicketingSystem
                     while (sdr.Read())
                     {
                         ComputeModel.downtimeSum = Convert.ToInt32(sdr["tickets"].ToString());
-                        ComputeModel.downtimeTotal = ComputeModel.numberofHours / ComputeModel.downtimeSum;
+                        ComputeModel.downtimeTotal = ComputeModel.downtimeSum/ComputeModel.numberofHours;
                         txtAveDowntime.Text = ComputeModel.downtimeTotal.ToString();
                     }
                 }
@@ -812,36 +819,44 @@ namespace TicketingSystem
             DialogResult dialogResult = MessageBox.Show("Do you want to extract?", "Extract", MessageBoxButtons.YesNo);
             if (dialogResult == DialogResult.Yes)
             {
-                Microsoft.Office.Interop.Excel._Application app = new Microsoft.Office.Interop.Excel.Application();
-                Microsoft.Office.Interop.Excel._Workbook workbook = app.Workbooks.Add(Type.Missing);
-                Microsoft.Office.Interop.Excel._Worksheet worksheet = null;
-                app.Visible = true;
-                worksheet = workbook.Sheets["Sheet1"];
-                worksheet = workbook.ActiveSheet;
-                for (int i = 1; i < dataGridView1.Columns.Count + 1; i++)
+                try
                 {
-                    worksheet.Cells[1, i] = dataGridView1.Columns[i - 1].HeaderText;
-                }
-                for (int i = 0; i < dataGridView1.Rows.Count - 1; i++)
-                {
-                    for (int j = 0; j < dataGridView1.Columns.Count; j++)
+                    Microsoft.Office.Interop.Excel._Application app = new Microsoft.Office.Interop.Excel.Application();
+                    Microsoft.Office.Interop.Excel._Workbook workbook = app.Workbooks.Add(Type.Missing);
+                    Microsoft.Office.Interop.Excel._Worksheet worksheet = null;
+                    app.Visible = true;
+                    worksheet = workbook.Sheets["Sheet1"];
+                    worksheet = workbook.ActiveSheet;
+                    for (int i = 1; i < dataGridView1.Columns.Count + 1; i++)
                     {
-                        if (dataGridView1.Rows[i].Cells[j].Value != null)
+                        worksheet.Cells[1, i] = dataGridView1.Columns[i - 1].HeaderText;
+                    }
+                    for (int i = 0; i < dataGridView1.Rows.Count - 1; i++)
+                    {
+                        for (int j = 0; j < dataGridView1.Columns.Count; j++)
                         {
-                            worksheet.Cells[i + 2, j + 1] = dataGridView1.Rows[i].Cells[j].Value.ToString();
-                        }
-                        else
-                        {
-                            worksheet.Cells[i + 2, j + 1] = "";
+                            if (dataGridView1.Rows[i].Cells[j].Value != null)
+                            {
+                                worksheet.Cells[i + 2, j + 1] = dataGridView1.Rows[i].Cells[j].Value.ToString();
+                            }
+                            else
+                            {
+                                worksheet.Cells[i + 2, j + 1] = "";
+                            }
                         }
                     }
+                    worksheet.Columns.WrapText = false;
+                    worksheet.Columns.AutoFit();
+                    worksheet.Cells[dataGridView1.Rows.Count + 2, 1] = "Technician: " + cbTechReportGen.Text;
+                    worksheet.Cells[dataGridView1.Rows.Count + 3, 1] = "Month: " + txtMonth.Text;
+                    worksheet.Cells[dataGridView1.Rows.Count + 4, 1] = "Number of Hours: " + txtNoofHours.Text;
+                    worksheet.Cells[dataGridView1.Rows.Count + 5, 1] = "Number of work done: " + txtWorkDone.Text;
+                    worksheet.Cells[dataGridView1.Rows.Count + 6, 1] = "Number of work not done: " + txtWorkNotDone.Text;
+                    worksheet.Cells[dataGridView1.Rows.Count + 7, 1] = "Average downtime: " + txtAveDowntime.Text;
                 }
-                worksheet.Cells[dataGridView1.Rows.Count + 2, 1] = "Technician: " + cbTechReportGen.Text;
-                worksheet.Cells[dataGridView1.Rows.Count + 3, 1] = "Month: " + txtMonth.Text;
-                worksheet.Cells[dataGridView1.Rows.Count + 4, 1] = "Number of Hours: " + txtNoofHours.Text;
-                worksheet.Cells[dataGridView1.Rows.Count + 5, 1] = "Number of work done: " + txtWorkDone.Text;
-                worksheet.Cells[dataGridView1.Rows.Count + 6, 1] = "Number of work not done: " + txtWorkNotDone.Text;
-                worksheet.Cells[dataGridView1.Rows.Count + 7, 1] = "Average downtime: " + txtAveDowntime.Text;
+                catch (Exception)
+                {
+                }
             }
         }
 

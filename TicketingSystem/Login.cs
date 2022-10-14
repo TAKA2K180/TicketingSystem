@@ -47,13 +47,13 @@ namespace TicketingSystem
 
         private void Login_Load(object sender, EventArgs e)
         {
-            txtUsername.Text = userName;
-            if (txtUsername.Text == "MANALORR")
+            //txtUsername.Text = userName;
+            if (userName == "MANALORR")
             {
                 txtPw.Text = "p@ssw0rd01";
                 //button2.Enabled = false;
             }
-            else if (txtUsername.Text == "_ADM_MANALOR")
+            else if (userName == "_ADM_MANALOR")
             {
                 txtPw.Text = "Essilor2022!";
             }

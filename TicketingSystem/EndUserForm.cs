@@ -68,7 +68,7 @@ namespace TicketingSystem
         private void EndUserForm_Load(object sender, EventArgs e)
         {
             dgvOverview.ClearSelection();
-            Overview();
+            GetOverview();
             Tab2();
             FindLink();
             QTimer();
@@ -176,22 +176,21 @@ namespace TicketingSystem
                 }
             }
         }
-        public void Overview()
+        public void GetOverview()
         {
             dgvOverview.ClearSelection();
-            command = "Select [EmpiID] AS 'ID',[Prio],Subject,[CurrentStat] as 'Status',[Department], DateFiled as 'Date Filed',[TicketTag] as 'Ticket Tag', TimeFiled as 'Time Filed', Condition from tblJobReq WHERE EmpiID = " + GlobalLogin.EmpiID + " and DateFiled >= DATEADD(day, -30, GETDATE()) order by case " +
-                "when lower(Assigned) = 1 then 1 " +
-                "when lower(CurrentStat) like '%Done%' then 4 " +
-                "when lower(CurrentStat) like '%Approved%' then 5 " +
-                "when lower(CurrentStat) like '%Cancelled%' then 6 " +
+            command = "Select EmpiID as 'ID', Requestor,[Prio],[CurrentStat] as 'Status',Subject,[Department], DateFiled as 'Date Filed',TimeFiled as 'Time Filed', Technician, Assigned,[TicketTag] AS 'Ticket Tag' from tblJobReq WHERE EmpiID = "+GlobalLogin.EmpiID+" and DateFiled >= DATEADD(day, -30, GETDATE()) order by case " +
+                "when lower(CurrentStat) like '%Pending%' then 1 " +
                 "when lower(CurrentStat) like '%Ongoing%' then 2 " +
-                "when lower(CurrentStat) like '%Pending%' then 3 " +
+                "when lower(CurrentStat) like '%Done%' then 3 " +
+                "when lower(CurrentStat) like '%Approved%' then 4 " +
+                "when lower(CurrentStat) like '%Cancelled%' then 5 " +
                 "when lower(Prio) = 1 then 1 " +
                 "when lower(Prio) = 2 then 2 " +
                 "when lower(Prio) = 3 then 3 " +
                 "when lower(Prio) = 4 then 4 " +
                 "when lower(Prio) = 5 then 5 " +
-                "else 6 end";
+                "else 6 end, DateFiled desc";
             SqlCommand cmd = new SqlCommand(command, con);
             SqlDataAdapter dAdapter = new SqlDataAdapter(cmd);
             DataSet datset = new DataSet();
@@ -206,7 +205,7 @@ namespace TicketingSystem
             dgvOverview.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
             dgvOverview.Columns["ID"].Visible = false;
             dgvOverview.Columns["Time Filed"].Visible = false;
-            dgvOverview.Columns["Condition"].Visible = false;
+            //dgvOverview.Columns["Condition"].Visible = false;
             dgvOverview.Columns["Department"].Visible = false;
             this.dgvOverview.DefaultCellStyle.Font = new Font("Poppins", 15);
             this.dgvOverview.ColumnHeadersDefaultCellStyle.Font = new Font("Poppins", 10);
@@ -360,7 +359,9 @@ namespace TicketingSystem
                         }
                         ticket = tag;
                         con.Close();
-                        command = "insert into tblJobReq ([EmpiID],[TicketTag],[Description],[Prio],[CurrentStat],[Department],[IssueType],[Imagepath],DateFiled,Requestor,TimeFiled,Name, Subject,LastEdit,Assigned,Category,DateRequired)values('" + txtID.Text + "','" + tag + "','" + txtDescription.Text + "','" + cbPrio.Text + "','" + "Pending" + "','" + txtDepartment.Text + "','" + cbIssue.Text + "','" + LinkModel.linkFinal + file + "','" + DateTime.Now + "','" + GlobalLogin.Username + "','" + DateTime.Now.ToString("hh:mm") + "','" + txtName.Text + "','" + txtSubject.Text + "','" + DateTime.Now + "',0,'" + cbCategory.Text + "','" + dtDateRequired.Value.ToShortDateString() + "')";
+                        string descript;
+                        descript = txtDescription.Text.Replace("\"", "").Replace("'", "");
+                        command = "insert into tblJobReq ([EmpiID],[TicketTag],[Description],[Prio],[CurrentStat],[Department],[IssueType],[Imagepath],DateFiled,Requestor,TimeFiled,Name, Subject,LastEdit,Assigned,Category,DateRequired)values('" + txtID.Text + "','" + tag + "','" + descript + "','" + cbPrio.Text + "','" + "Pending" + "','" + txtDepartment.Text + "','" + cbIssue.Text + "','" + LinkModel.linkFinal + file + "','" + DateTime.Now + "','" + GlobalLogin.Username + "','" + DateTime.Now.ToString("hh:mm") + "','" + txtName.Text + "','" + txtSubject.Text + "','" + DateTime.Now + "',0,'" + cbCategory.Text + "','" + dtDateRequired.Value.ToShortDateString() + "')";
                         SqlCommand cmd = new SqlCommand(command, con);
                         con.Open();
                         cmd.ExecuteNonQuery();
@@ -372,14 +373,14 @@ namespace TicketingSystem
                         cbPrio.Text = "";
                         dgvOverview.Update();
                         dgvOverview.Refresh();
-                        Overview();
+                        GetOverview();
+                        FindDetails();
+                        FindEmail();
                     }
                     catch (Exception ex)
                     {
                         MaterialMessageBox.Show(ex.Message);
                     }
-                    FindDetails();
-                    FindEmail();
                 }
                 else if (dialogResult == DialogResult.No)
                 {
@@ -485,7 +486,7 @@ namespace TicketingSystem
 
         private void btnTab1Refresh_Click(object sender, EventArgs e)
         {
-            Overview();
+            GetOverview();
         }
 
         private void btnTab1Details_Click(object sender, EventArgs e)
@@ -580,7 +581,7 @@ namespace TicketingSystem
                     con.Open();
                     cmd.ExecuteNonQuery();
                     MaterialMessageBox.Show("Ticket updated.");
-                    Overview();
+                    GetOverview();
                 }
             }
             else
@@ -606,7 +607,7 @@ namespace TicketingSystem
                     con.Open();
                     cmd.ExecuteNonQuery();
                     MaterialMessageBox.Show("Ticket updated.");
-                    Overview();
+                    GetOverview();
                 }
             }
             else
@@ -628,7 +629,7 @@ namespace TicketingSystem
                     con.Open();
                     cmd.ExecuteNonQuery();
                     MaterialMessageBox.Show("Ticket updated.");
-                    Overview();
+                    GetOverview();
                 }
             }
             else
@@ -650,7 +651,7 @@ namespace TicketingSystem
                     con.Open();
                     cmd.ExecuteNonQuery();
                     MaterialMessageBox.Show("Ticket updated.");
-                    Overview();
+                    GetOverview();
                 }
             }
             else
@@ -682,7 +683,7 @@ namespace TicketingSystem
                         con.Open();
                         cmd.ExecuteNonQuery();
                         MaterialMessageBox.Show("Ticket updated.");
-                        Overview();
+                        GetOverview();
                     }
                 }
             }
@@ -723,7 +724,7 @@ namespace TicketingSystem
                         con.Open();
                         cmd.ExecuteNonQuery();
                         MaterialMessageBox.Show("Ticket approved.");
-                        Overview();
+                        GetOverview();
                     }
                 }
             }
@@ -784,7 +785,7 @@ namespace TicketingSystem
         {
             if (txtSearch.Text == "")
             {
-                Overview();
+                GetOverview();
             }
             else
             {

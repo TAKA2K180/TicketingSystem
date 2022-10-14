@@ -25,5 +25,7 @@ namespace TicketingSystem.Model
         public static DateTime DateRequired;
         public static string ActionsTaken;
         public static string Category;
+        public static string Findings;
+        public static string Actions;
     }
 }

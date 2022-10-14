@@ -38,6 +38,14 @@ namespace TicketingSystem
         string messageBody;
         int ngi = 0;
         string wow = default;
+        string tag;
+        string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        char[] stringChars = new char[5];
+        Random random = new Random();
+        String finalString;
+        int techCount = 0;
+        int categoryCount = 0;
+        int prioCount = 0;
         public TicketPreviewAdmin()
         {
             InitializeComponent();
@@ -45,9 +53,10 @@ namespace TicketingSystem
 
         private void TicketPreviewAdmin_Load(object sender, EventArgs e)
         {
+            //GetTech();
             if (TicketModel.adminFile == 0)
             {
-                Preview();
+                GetPreview();
             }
             else
             {
@@ -58,15 +67,34 @@ namespace TicketingSystem
                 lblDowntime.Text = "";
                 lblDate.Text = "";
                 lblTag.Text = "";
-                AfterLoad();
+                GetAfterLoad();
             }
         }
-        private void AfterLoad()
+        private void GetTech()
         {
+            if (techCount == 0)
+            {
+                SqlConnection con2 = new SqlConnection(DbConnection.cs);
+                con2.Close();
+                command = "select Name from tblTechnicianList";
+                SqlCommand cmd2 = new SqlCommand(command, con2);
+                con2.Open();
+                cmd2.ExecuteNonQuery();
+                SqlDataReader sdr2 = cmd2.ExecuteReader();
+                while (sdr2.Read())
+                {
+                    cbTech.Items.Add(sdr2[0].ToString());
+                    techCount++;
+                }
+            }
+        }
+        private void GetCategory()
+        {
+            if (categoryCount == 0)
             {
                 DataTable dt = new DataTable();
                 con.Close();
-                command = "SELECT IssueType FROM [db_TicketingSystem].[dbo].[tblIssueType] where RootCause = '" + cbCategory.Text + "'";
+                command = "SELECT distinct RootCause FROM [db_TicketingSystem].[dbo].[tblIssueType]";
                 SqlCommand cmd2 = new SqlCommand(command, con);
                 SqlDataAdapter da2 = new SqlDataAdapter(command, con);
                 con.Open();
@@ -76,9 +104,14 @@ namespace TicketingSystem
 
                 while (sdr.Read())
                 {
-                    cbIssue.Items.Add(sdr[0].ToString());
+                    cbCategory.Items.Add(sdr[0].ToString());
+                    categoryCount++;
                 }
             }
+        }
+        private void GetAfterLoad()
+        {
+            
             {
                 DataTable dt = new DataTable();
                 con.Close();
@@ -90,14 +123,8 @@ namespace TicketingSystem
                 da2.Fill(dt);
                 SqlDataReader sdr = cmd2.ExecuteReader();
             }
-            {
-                for (int i = 1; i <= 5; i++)
-                {
-                    cbPrio.Items.Add(i);
-                }
-            }
         }
-        public void Preview()
+        public void GetPreview()
         {
             DateTime ez;
             DateTime edited = default;
@@ -113,27 +140,21 @@ namespace TicketingSystem
                 con.Open();
                 cmd.ExecuteNonQuery();
                 SqlDataReader sdr = cmd.ExecuteReader();
-                if (sdr.HasRows)
+                if (sdr != null && sdr.HasRows)
                 {
                     while (sdr.Read())
                     {
                         lblTag.Text = TicketModel.TicketTag;
                         txtID.Text = TicketModel.ID;
                         txtName.Text = TicketModel.Name;
-                        cbDepartment.Text = TicketModel.Department;
+                        cbDepartment.Items.Add(TicketModel.Department);
+                        cbDepartment.SelectedIndex = 0;
                         txtDescription.Text = TicketModel.Description;
                         txtSubject.Text = TicketModel.Subject;
                         dtDateRequired.Value = TicketModel.DateRequired;
-                        cbIssue.Items.Add(TicketModel.IssueType);
-                        cbIssue.SelectedIndex = 0;
-                        cbPrio.Items.Add(Convert.ToString(TicketModel.Priority));
-                        cbPrio.SelectedIndex = 0;
-                        cbStatus.Items.Add(TicketModel.Currentstat);
-                        cbStatus.SelectedIndex = 0;
-                        cbTech.Items.Add(TicketModel.Technician);
-                        cbTech.SelectedIndex = 0;
-                        cbCategory.Items.Add(sdr["RootCause"].ToString());
-                        cbCategory.SelectedIndex = 0;
+                        cbPrio.Text = TicketModel.Priority.ToString();
+                        cbStatus.Text = TicketModel.Currentstat;
+                        cbTech.Text = TicketModel.Technician;
                         ez = Convert.ToDateTime(sdr["DateFiled"].ToString());
                         if (sdr["DateApproved"].ToString() != "")
                         {
@@ -149,10 +170,12 @@ namespace TicketingSystem
                             down = DateTime.Now - TicketModel.DateFiled;
                         }
 
-                        lblDowntime.Text = ((int)Math.Round(down.TotalHours, MidpointRounding.AwayFromZero)).ToString() + " Hours";
+                        lblDowntime.Text = ((int)Math.Round(down.TotalHours, MidpointRounding.AwayFromZero)).ToString() + " Hour(s)";
                         lblDate.Text = Convert.ToString(TicketModel.DateFiled);
                         txtRequestor.Text = TicketModel.Requestor;
                         cbTech.Text = TicketModel.Technician;
+                        txtPreventive.Text = TicketModel.Actions;
+                        txtRootCause.Text = TicketModel.Rootcause;
                         if (TicketModel.ImagePath == "")
                         {
                             pictureBox1.Image = null;
@@ -164,29 +187,19 @@ namespace TicketingSystem
                             lblPath.Text = fileonly;
                             pictureBox1.Image = Image.FromFile(fileName);
                         }
+                        cbCategory.Text = sdr["Category"].ToString();
+                        cbIssue.Text = TicketModel.IssueType;
+                        con.Close();
                     }
                 }
                 else
                 {
                     MessageBox.Show("Error loading ticket");
                 }
-                {
-                    con.Close();
-                    command = "select Name from tblTechnicianList";
-                    SqlCommand cmd2 = new SqlCommand(command, con);
-                    con.Open();
-                    cmd2.ExecuteNonQuery();
-                    SqlDataReader sdr2 = cmd2.ExecuteReader();
-                    while (sdr2.Read())
-                    {
-                        cbTech.Items.Add(sdr2["Name"].ToString());
-
-                    }
-                }
             }
             catch (Exception ex)
             {
-                MaterialMessageBox.Show(ex.Message);
+                //MaterialMessageBox.Show(ex.Message);
             }
         }
 
@@ -212,9 +225,19 @@ namespace TicketingSystem
                 MessageBox.Show(string.Format("{0} Directory does not exist!", folderPath));
             }
         }
+        public void TagGenerator()
+        {
+            for (int i = 0; i < stringChars.Length; i++)
+            {
+                stringChars[i] = chars[random.Next(chars.Length)];
+            }
+            finalString = new String(stringChars);
+        }
 
         private void materialButton1_Click(object sender, EventArgs e)
         {
+            TagGenerator();
+            tag = tag = "TM" + GlobalLogin.EmpiID + DateTime.Now.Year + finalString + "GGEZ";
             try
             {
                 if (cbTech.Text == "")
@@ -224,29 +247,36 @@ namespace TicketingSystem
                 else
                 {
                     con.Close();
-                    if (cbStatus.Text == "Done")
+                    if (TicketModel.adminFile == 1)
                     {
-                        command = "update tblJobReq set Prio = '" + cbPrio.Text + "', CurrentStat = '" + cbStatus.Text + "',Category = '" + cbCategory.Text + "', IssueType = '" + cbIssue.Text + "', RootCause = '" + txtRootCause.Text + "', PreventiveActions = '" + txtPreventive.Text + "', Technician = '" + cbTech.Text + "', DateDone = '" + DateTime.Now + "', TimeDone = '" + DateTime.Now.ToShortTimeString() + "', Assigned = 1, Findings = '"+txtDescription.Text+"', Category = '"+cbCategory.Text+"' where TicketTag = '" + lblTag.Text + "'";
+                        command = $"insert into tblJobReq ([EmpiID],[TicketTag],[Description],[Prio],[CurrentStat],[Department],[IssueType],DateFiled,Requestor,TimeFiled,Name, Subject,LastEdit,Assigned,Category,DateRequired)values('{GlobalLogin.EmpiID}','{tag}','{txtDescription.Text}', '{cbPrio.Text}','{cbStatus.Text}','{cbDepartment.Text}','{cbIssue.Text}','{DateTime.Now}','{txtRequestor.Text}','{DateTime.Now.ToShortTimeString()}','{txtRequestor.Text}','{txtSubject.Text}','{DateTime.Now}',{1},'{cbCategory.Text}','{dtDateRequired.Value}')";
                     }
-                    else if (cbStatus.Text == "Ongoing")
+                    else
                     {
-                        command = "update tblJobReq set Prio = '" + cbPrio.Text + "', CurrentStat = '" + cbStatus.Text + "',Category = '" + cbCategory.Text + "', IssueType = '" + cbIssue.Text + "', RootCause = '" + txtRootCause.Text + "', PreventiveActions = '" + txtPreventive.Text + "', Technician = '" + cbTech.Text + "', LastEdit = '" + DateTime.Now + "', Assigned = 1, Findings = '" + txtDescription.Text + "', Category = '" + cbCategory.Text + "' where TicketTag = '" + lblTag.Text + "'";
+                        if (cbStatus.Text == "Done")
+                        {
+                            command = "update tblJobReq set Prio = '" + cbPrio.Text + "', CurrentStat = '" + cbStatus.Text + "',Category = '" + cbCategory.Text + "', IssueType = '" + cbIssue.Text + "', RootCause = '" + txtRootCause.Text + "', PreventiveActions = '" + txtPreventive.Text + "', Technician = '" + cbTech.Text + "', DateDone = '" + DateTime.Now + "', TimeDone = '" + DateTime.Now.ToShortTimeString() + "', Assigned = 1, Findings = '" + txtDescription.Text + "' where TicketTag = '" + lblTag.Text + "'";
+                        }
+                        else if (cbStatus.Text == "Ongoing")
+                        {
+                            command = "update tblJobReq set Prio = '" + cbPrio.Text + "', CurrentStat = '" + cbStatus.Text + "',Category = '" + cbCategory.Text + "', IssueType = '" + cbIssue.Text + "', RootCause = '" + txtRootCause.Text + "', PreventiveActions = '" + txtPreventive.Text + "', Technician = '" + cbTech.Text + "', LastEdit = '" + DateTime.Now + "', Assigned = 1, Findings = '" + txtDescription.Text + "' where TicketTag = '" + lblTag.Text + "'";
+                        }
+                        else if (cbStatus.Text == "Pending")
+                        {
+                            command = "update tblJobReq set Prio = '" + cbPrio.Text + "', CurrentStat = '" + cbStatus.Text + "',Category = '" + cbCategory.Text + "', IssueType = '" + cbIssue.Text + "', RootCause = '" + txtRootCause.Text + "', PreventiveActions = '" + txtPreventive.Text + "', Technician = '" + cbTech.Text + "', LastEdit = '" + DateTime.Now + "', Assigned = 1, Findings = '" + txtDescription.Text + "' where TicketTag = '" + lblTag.Text + "'";
+                        }
+                        else if (cbStatus.Text == "")
+                        {
+                            MaterialMessageBox.Show("Please select status");
+                        }
+                        //command = "update tblJobReq set Prio = '" + cbPrio.Text + "', CurrentStat = '"+cbStatus.Text+"', IssueType = '"+cbIssue.Text+"', Condition = '"+cbCondition.Text+"', RootCause = '"+txtRootcause.Text+ "', PreventiveActions = '"+txtPreventive.Text+"', Technician = '"+GlobalLogin.Username+"'";                     
                     }
-                    else if (cbStatus.Text == "Pending")
-                    {
-                        command = "update tblJobReq set Prio = '" + cbPrio.Text + "', CurrentStat = '" + cbStatus.Text + "',Category = '" + cbCategory.Text + "', IssueType = '" + cbIssue.Text + "', RootCause = '" + txtRootCause.Text + "', PreventiveActions = '" + txtPreventive.Text + "', Technician = '" + cbTech.Text + "', LastEdit = '" + DateTime.Now + "', Assigned = 1, Findings = '" + txtDescription.Text + "', Category = '" + cbCategory.Text + "' where TicketTag = '" + lblTag.Text + "'";
-                    }
-                    else if (cbStatus.Text == "")
-                    {
-                        MaterialMessageBox.Show("Please select status");
-                    }
-                    //command = "update tblJobReq set Prio = '" + cbPrio.Text + "', CurrentStat = '"+cbStatus.Text+"', IssueType = '"+cbIssue.Text+"', Condition = '"+cbCondition.Text+"', RootCause = '"+txtRootcause.Text+ "', PreventiveActions = '"+txtPreventive.Text+"', Technician = '"+GlobalLogin.Username+"'";
-                    SqlCommand cmd = new SqlCommand(command, con);
-                    con.Open();
-                    cmd.ExecuteNonQuery();
-                    MaterialMessageBox.Show("Ticket updated");
-                    this.Hide();
                 }
+                SqlCommand cmd = new SqlCommand(command, con);
+                con.Open();
+                cmd.ExecuteNonQuery();
+                MaterialMessageBox.Show("Ticket updated");
+                this.Hide();
             }
             catch (Exception ex)
             {
@@ -255,16 +285,6 @@ namespace TicketingSystem
         }
 
         private void cbStatus_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void cbStatus_MouseDown(object sender, MouseEventArgs e)
-        {
-
-        }
-
-        private void cbStatus_MouseHover(object sender, EventArgs e)
         {
             if (count == 0)
             {
@@ -287,14 +307,7 @@ namespace TicketingSystem
 
         private void cbPrio_MouseHover(object sender, EventArgs e)
         {
-            if (prio == 0)
-            {
-                for (int i = 1; i <= 5; i++)
-                {
-                    cbPrio.Items.Add(i);
-                }
-                prio++;
-            }
+            
         }
 
         private void materialExpansionPanel1_Paint(object sender, PaintEventArgs e)
@@ -365,14 +378,14 @@ namespace TicketingSystem
                 cmd.ExecuteNonQuery();
 
                 MaterialMessageBox.Show("Transferred.");
-                emailTransfer();
+                EmailTransfer();
             }
             catch (Exception ex)
             {
                 MaterialMessageBox.Show(ex.Message);
             }
         }
-        public void emailTransfer()
+        public void EmailTransfer()
         {
             int yeah = 0;
             con.Close();
@@ -518,6 +531,57 @@ namespace TicketingSystem
                 txtName.Text = sdr["FirstName"].ToString() + " " + sdr["LastName"].ToString();
                 cbDepartment.Items.Add(sdr["Department"].ToString());
                 cbDepartment.SelectedIndex = 0;
+            }
+        }
+
+        private void cbCategory_TextChanged(object sender, EventArgs e)
+        {
+            cbIssue.Items.Clear();
+            con.Close();
+            command = "SELECT IssueType FROM [db_TicketingSystem].[dbo].[tblIssueType] where RootCause = '" + cbCategory.Text + "'";
+            SqlCommand cmd2 = new SqlCommand(command, con);
+            con.Open();
+            cmd2.ExecuteNonQuery();
+            SqlDataReader sdr3 = cmd2.ExecuteReader();
+
+            while (sdr3.Read())
+            {
+                cbIssue.Items.Add(sdr3[0].ToString());
+            }
+            con.Close();
+        }
+
+        private void cbTech_Click(object sender, EventArgs e)
+        {
+            GetTech();
+        }
+
+        private void cbPrio_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (prio == 0)
+            {
+                for (int i = 1; i <= 5; i++)
+                {
+                    cbPrio.Items.Add(i);
+                }
+                prio++;
+            }
+        }
+
+        private void cbCategory_Click(object sender, EventArgs e)
+        {
+            GetCategory();
+        }
+
+        private void cbPrio_Click(object sender, EventArgs e)
+        {
+            if (prioCount == 0)
+            {
+                for (int i = 1; i <= 5; i++)
+                {
+                    cbPrio.Items.Add(i);
+                    prioCount++;
+                }
             }
         }
     }
